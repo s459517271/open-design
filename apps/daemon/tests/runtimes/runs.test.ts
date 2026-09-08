@@ -1500,6 +1500,7 @@ describe('run event log persistence', () => {
         schemaVersion: 1,
         projectId: 'p1',
         workspaceId: 'workspace-a',
+        workspaceMemberId: 'member-a',
         source: 'persisted_project_binding',
       },
     });
@@ -1514,6 +1515,7 @@ describe('run event log persistence', () => {
         schemaVersion: 1,
         projectId: 'p1',
         workspaceId: 'workspace-a',
+        workspaceMemberId: 'member-a',
         source: 'persisted_project_binding',
       },
     });
