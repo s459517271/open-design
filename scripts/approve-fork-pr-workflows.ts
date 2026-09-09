@@ -74,8 +74,6 @@ function pendingRunSetSignature(runs: WorkflowRun[]): string {
 // this set.
 const allowedWorkflowPaths = new Set([
   ".github/workflows/ci.yml",
-  ".github/workflows/visual-pr-capture.yml",
-  ".github/workflows/visual-pr-verify.yml",
 ]);
 
 export function normalizeWorkflowPath(path: string): string {
@@ -119,14 +117,11 @@ export function isDeniedChangedPath(path: string): boolean {
     path.startsWith(".github/") ||
     path.startsWith("scripts/") ||
     path.startsWith("e2e/scripts/") ||
-    path.startsWith("nix/") ||
     path.startsWith("tools/pack/") ||
     path === "package.json" ||
     path.endsWith("/package.json") ||
     path === "pnpm-lock.yaml" ||
     path === "pnpm-workspace.yaml" ||
-    path === "flake.nix" ||
-    path === "flake.lock" ||
     /(^|\/)tsconfig(\.[^.]+)*\.json$/.test(path) ||
     /(^|\/)(next|vite|vitest|playwright|astro|postcss|tailwind|eslint|prettier|wrangler|electron-builder)(\.config)?\.[^.]+$/.test(
       path,
@@ -139,9 +134,7 @@ export function isDeniedChangedPath(path: string): boolean {
 function isDocsPath(path: string): boolean {
   return (
     path === "README.md" ||
-    path === "README.zh-CN.md" ||
     path === "CONTRIBUTING.md" ||
-    path === "CONTRIBUTING.zh-CN.md" ||
     path === "QUICKSTART.md" ||
     path.startsWith("docs/")
   );
@@ -151,12 +144,14 @@ function changedPathSet(file: PullRequestFile): string[] {
   return [file.filename, file.previous_filename].filter((path): path is string => Boolean(path));
 }
 
-export function isPendingApprovalRun(run: WorkflowRun, pull: PullRequest): boolean {
+export function isPendingApprovalRun(run: WorkflowRun, pull: PullRequest, files?: PullRequestFile[]): boolean {
+  const workflowPath = normalizeWorkflowPath(run.path);
+  void files;
   return (
     run.head_sha === pull.head.sha &&
     run.event === "pull_request" &&
     (run.status === "action_required" || run.conclusion === "action_required") &&
-    allowedWorkflowPaths.has(normalizeWorkflowPath(run.path))
+    allowedWorkflowPaths.has(workflowPath)
   );
 }
 
@@ -330,8 +325,11 @@ async function listWorkflowRunsForHeadSha(
 export async function listPendingApprovalRuns(
   repo: string,
   pull: PullRequest,
-  deps: ListPendingApprovalRunsDeps = {},
+  filesOrDeps: PullRequestFile[] | ListPendingApprovalRunsDeps = [],
+  maybeDeps: ListPendingApprovalRunsDeps = {},
 ): Promise<WorkflowRun[]> {
+  const files = Array.isArray(filesOrDeps) ? filesOrDeps : undefined;
+  const deps = Array.isArray(filesOrDeps) ? maybeDeps : filesOrDeps;
   const loadWorkflowRunsResponsePage = deps.loadWorkflowRunsResponsePage ?? ((path: string) => github<WorkflowRunsResponse>(path));
   const loadPullRequestsForHeadSha =
     deps.loadPullRequestsForHeadSha ?? ((currentRepo: string, headSha: string) => listPullRequestsForHeadSha(currentRepo, headSha));
@@ -360,7 +358,7 @@ export async function listPendingApprovalRuns(
 
   return workflowRuns.filter(
     (run) =>
-      isPendingApprovalRun(run, pull) &&
+      isPendingApprovalRun(run, pull, files) &&
       runTargetsPullRequest(run, pull, associatedPullsForHeadSha, associatedPullsForHeadRef),
   );
 }
@@ -413,7 +411,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  const pendingRuns = await waitForPendingApprovalRuns(() => listPendingApprovalRuns(repo, pull));
+  const pendingRuns = await waitForPendingApprovalRuns(() => listPendingApprovalRuns(repo, pull, files));
 
   if (pendingRuns.length === 0) {
     console.log(`No action_required pull_request workflow runs found for PR #${prNumber} at ${pull.head.sha}.`);

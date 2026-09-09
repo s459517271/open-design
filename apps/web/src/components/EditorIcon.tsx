@@ -1,12 +1,8 @@
-// Per-editor icon for the hand-off menu. Renders a small rounded-square
-// badge with a brand-tinted background and a distinctive glyph — mirrors
-// the macOS dock affordance where each app has its own colored tile,
-// rather than a single abstract folder/handoff glyph that hides which
-// target the user is about to launch.
-//
-// Glyphs are stylized (Feather/Lucide-style) representations — not the
-// official trademarked logos — so we keep visual identification without
-// shipping brand assets we don't have a license for.
+// Per-editor icon for the hand-off menu. Real product marks are bundled as
+// PNGs under `apps/web/public/editor-icons/` (downscaled from official 512px
+// app icons) and rendered as plain <img> so each brand's own tile shape,
+// colors, and rounding are preserved. Only generic destinations without brand
+// artwork (Explorer / File Manager) keep a drawn glyph.
 
 import type { HostEditorId } from '@open-design/contracts';
 
@@ -15,198 +11,79 @@ interface Props {
   size?: number;
 }
 
+// Editors with a bundled brand asset. `mono: true` marks bare single-color
+// glyphs (no baked tile) that must follow the theme's text color — rendered
+// as a CSS-masked span, same pattern as AgentIcon's MONO_ICONS, so the mark
+// stays legible on dark panels.
+const IMAGE_ICONS: Record<string, { mono?: boolean }> = {
+  cursor: {},
+  vscode: {},
+  qoder: {},
+  xcode: {},
+  finder: {},
+  terminal: {},
+  zed: {},
+  antigravity: {},
+  webstorm: {},
+  idea: {},
+  warp: {},
+  windsurf: { mono: true },
+};
+
+function folderLogo(size: number) {
+  const s = size * 0.76;
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M2.75 5.75A2.75 2.75 0 0 1 5.5 3h4.32c.74 0 1.43.36 1.86.96l1.1 1.54h5.72a2.75 2.75 0 0 1 2.75 2.75v9.5a2.75 2.75 0 0 1-2.75 2.75h-13A2.75 2.75 0 0 1 2.75 17.75z"
+        fill="currentColor"
+      />
+      <path d="M3.7 8.1h16.6" stroke="#ffffff" strokeWidth="1.25" strokeLinecap="round" opacity=".7" />
+    </svg>
+  );
+}
+
 interface EditorVisual {
-  // Tile background — chosen to match the editor's primary brand color
-  // closely enough to read at a glance in the hand-off menu.
   bg: string;
-  // Foreground stroke / glyph color. White on dark tiles, dark on light.
   fg: string;
   glyph: (size: number) => JSX.Element;
 }
 
-function angleBrackets(size: number) {
-  const s = size * 0.62;
-  return (
-    <svg
-      width={s}
-      height={s}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2.4}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m9 7-5 5 5 5" />
-      <path d="m15 7 5 5-5 5" />
-    </svg>
-  );
-}
-
-function cursorPointer(size: number) {
-  const s = size * 0.6;
-  return (
-    <svg width={s} height={s} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M5 3l5 15 3-6 6-3z" />
-    </svg>
-  );
-}
-
-function lightningZ(size: number) {
-  const s = size * 0.62;
-  return (
-    <svg width={s} height={s} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M6 4h12L9 13h9l-13 7 5-9H4z" />
-    </svg>
-  );
-}
-
-function wave(size: number) {
-  const s = size * 0.66;
-  return (
-    <svg
-      width={s}
-      height={s}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2.2}
-      strokeLinecap="round"
-    >
-      <path d="M3 12c2 -3 4 -3 6 0s4 3 6 0 4 -3 6 0" />
-      <path d="M3 17c2 -3 4 -3 6 0s4 3 6 0 4 -3 6 0" />
-    </svg>
-  );
-}
-
-function macFace(size: number) {
-  const s = size * 0.7;
-  return (
-    <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="12" r="9" fill="currentColor" opacity="0.95" />
-      <circle cx="9" cy="10" r="1.2" fill="#fff" />
-      <circle cx="15" cy="10" r="1.2" fill="#fff" />
-      <path
-        d="M8.5 14.5c1 1 2.2 1.5 3.5 1.5s2.5 -.5 3.5 -1.5"
-        stroke="#fff"
-        strokeWidth={1.4}
-        strokeLinecap="round"
-        fill="none"
-      />
-    </svg>
-  );
-}
-
-function terminalPrompt(size: number) {
-  const s = size * 0.62;
-  return (
-    <svg
-      width={s}
-      height={s}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2.4}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m6 9 4 3 -4 3" />
-      <path d="M12 17h6" />
-    </svg>
-  );
-}
-
-function warpTriangle(size: number) {
-  const s = size * 0.66;
-  return (
-    <svg width={s} height={s} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 4 22 20H2z" />
-    </svg>
-  );
-}
-
-function hammer(size: number) {
-  const s = size * 0.66;
-  return (
-    <svg
-      width={s}
-      height={s}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m15 12-8.5 8.5a2.12 2.12 0 0 1-3-3L12 9" />
-      <path d="m17.64 15 3.36-3.36a2.83 2.83 0 0 0 0-4l-2.64-2.64a2.83 2.83 0 0 0-4 0L11 8.36" />
-    </svg>
-  );
-}
-
-function diamond(size: number) {
-  const s = size * 0.66;
-  return (
-    <svg width={s} height={s} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 3 22 12l-10 9L2 12z" />
-    </svg>
-  );
-}
-
-function orbit(size: number) {
-  const s = size * 0.7;
-  return (
-    <svg
-      width={s}
-      height={s}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.8}
-    >
-      <circle cx="12" cy="12" r="3" fill="currentColor" />
-      <ellipse cx="12" cy="12" rx="9" ry="4" transform="rotate(-30 12 12)" />
-    </svg>
-  );
-}
-
-function letter(ch: string, size: number) {
-  const s = size * 0.7;
-  return (
-    <svg width={s} height={s} viewBox="0 0 24 24">
-      <text
-        x="12"
-        y="17"
-        textAnchor="middle"
-        fontSize="15"
-        fontWeight="800"
-        fontFamily="'Inter', system-ui, -apple-system, sans-serif"
-        fill="currentColor"
-      >
-        {ch}
-      </text>
-    </svg>
-  );
-}
-
 const EDITORS: Record<string, EditorVisual> = {
-  vscode: { bg: '#0078d4', fg: '#ffffff', glyph: angleBrackets },
-  cursor: { bg: '#0a0a0a', fg: '#ffffff', glyph: cursorPointer },
-  windsurf: { bg: '#0c8a55', fg: '#ffffff', glyph: wave },
-  zed: { bg: '#1a1a1a', fg: '#d0d0d0', glyph: lightningZ },
-  qoder: { bg: '#f5a623', fg: '#1a1a1a', glyph: diamond },
-  antigravity: { bg: '#7c4dff', fg: '#ffffff', glyph: orbit },
-  webstorm: { bg: '#f97316', fg: '#ffffff', glyph: (s) => letter('W', s) },
-  idea: { bg: '#e91e63', fg: '#ffffff', glyph: (s) => letter('I', s) },
-  xcode: { bg: '#1d76d6', fg: '#ffffff', glyph: hammer },
-  finder: { bg: '#3097f6', fg: '#ffffff', glyph: macFace },
-  explorer: { bg: '#fbbf24', fg: '#1a1a1a', glyph: (s) => letter('E', s) },
-  'file-manager': { bg: '#6b7280', fg: '#ffffff', glyph: (s) => letter('F', s) },
-  terminal: { bg: '#111111', fg: '#9be37a', glyph: terminalPrompt },
-  warp: { bg: '#ff5c1c', fg: '#ffffff', glyph: warpTriangle },
+  explorer: { bg: '#fbbf24', fg: '#1a1a1a', glyph: folderLogo },
+  'file-manager': { bg: '#6b7280', fg: '#ffffff', glyph: folderLogo },
 };
 
 export function EditorIcon({ editorId, size = 16 }: Props) {
+  const image = IMAGE_ICONS[editorId];
+  if (image) {
+    const src = `/editor-icons/${editorId}.png`;
+    if (image.mono) {
+      return (
+        <span
+          className="editor-icon editor-icon-mask"
+          style={{
+            width: size,
+            height: size,
+            WebkitMaskImage: `url("${src}")`,
+            maskImage: `url("${src}")`,
+          }}
+          aria-hidden="true"
+        />
+      );
+    }
+    return (
+      <img
+        className="editor-icon editor-icon-img"
+        src={src}
+        alt=""
+        width={size}
+        height={size}
+        aria-hidden="true"
+        draggable={false}
+      />
+    );
+  }
   const visual = EDITORS[editorId];
   if (!visual) {
     // Fallback — match a neutral folder tile rather than the abstract
